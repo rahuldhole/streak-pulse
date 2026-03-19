@@ -4,6 +4,10 @@ A Duolingo-inspired GitHub activity streak widget that visualizes your coding co
 
 It turns your GitHub contributions into a **living motivation system** instead of a static graph.
 
+**Demo:**
+
+![Streak Pulse](https://streak-pulse.rahuldhole.com?user=rahuldhole&theme=dark)
+
 ---
 
 ## ⚡ What this is
