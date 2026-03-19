@@ -36,15 +36,10 @@ It’s not decoration. It’s feedback.
 ## 🧩 Demo
 
 > Paste this into your browser:
-
-```html
-<!-- full demo page coming soon! -->
-````
-
-Or embed it into a GitHub README:
+embed it into a GitHub README:
 
 ```md
-![Streak Pulse](https://streak-pulse.rahuldhole.com?user=your_github_user_name)
+![Streak Pulse](https://streak-pulse.rahuldhole.com?user=your_github_user_name&theme=dark)
 
 Themes: `transparent` (default), `light`, `dark`.
 ```
