@@ -41,7 +41,7 @@ app.all('/', async (c) => {
     const svg = renderSVG(stats, last7, maxCount, theme)
     return c.body(svg, 200, {
       'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'max-age=3600'
+      'Cache-Control': 'public, max-age=3600, s-maxage=7200'
     })
   } catch (error: any) {
     return c.json({ error: error.message }, 500)
