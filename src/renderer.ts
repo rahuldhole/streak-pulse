@@ -142,19 +142,20 @@ export function renderLandingPage() {
             <div class="preview">
               <img id="preview-img" src="/?user=rahuldhole" alt="Streak Pulse Preview">
             </div>
+            
+            <label style="margin-top: 1.5rem;">Markdown</label>
+            <div class="code-box">
+              <pre id="md-code"></pre>
+              <button class="copy-btn" onclick="copy('md-code')">Copy</button>
+            </div>
+  
+            <label style="margin-top: 1.5rem;">HTML</label>
+            <div class="code-box">
+              <pre id="html-code"></pre>
+              <button class="copy-btn" onclick="copy('html-code')">Copy</button>
+            </div>
           </div>
 
-          <label>Markdown</label>
-          <div class="code-box">
-            <pre id="md-code"></pre>
-            <button class="copy-btn" onclick="copy('md-code')">Copy</button>
-          </div>
-
-          <label style="margin-top: 1.5rem;">HTML</label>
-          <div class="code-box">
-            <pre id="html-code"></pre>
-            <button class="copy-btn" onclick="copy('html-code')">Copy</button>
-          </div>
 
           <div class="footer">
             Built by <a href="https://github.com/rahuldhole/streak-pulse" target="_blank">Streak Pulse</a>
