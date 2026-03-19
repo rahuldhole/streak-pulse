@@ -18,18 +18,7 @@ query($login:String!) {
   }
 }`
 
-const YEAR_QUERY = `
-query($login:String!, $from:DateTime!, $to:DateTime!) {
-  user(login:$login) {
-    contributionsCollection(from:$from, to:$to) {
-      contributionCalendar {
-        totalContributions
-      }
-    }
-  }
-}`
-
-export async function fetchGitHubData(username: string, token: string): Promise<{ days: GitHubContributionDay[], totalContributions: number }> {
+export async function fetchGitHubData(username: string, token: string): Promise<{ days: GitHubContributionDay[], totalContributions: number, contributionYears: number[] }> {
   const headers = {
     "Content-Type": "application/json",
     "Authorization": "Bearer " + token,
@@ -59,37 +48,52 @@ export async function fetchGitHubData(username: string, token: string): Promise<
   const currentCalendar = user.contributionsCollection.contributionCalendar
   const years: number[] = user.contributionsCollection.contributionYears
   
-  // The first year in the list is the current one, which we already have
-  let grandTotal = currentCalendar.totalContributions
-
-  // Fetch totals for the other years
-  // We skip years[0] because that's usually the current period already covered
-  // but wait, GraphQL years might overlap or be strictly calendar years.
-  // Actually, contributionCalendar.totalContributions in the first call is for the LAST 365 DAYS.
-  // The contributionYears are usually calendar years like 2024, 2023, etc.
+  // The first call returns the last 365 days of contributions, which we use for the streak display.
+  // For the "Total Contributions" count, we need to sum up all time contributions across all years.
+  // We use GraphQL aliases to fetch all years in a single batch request to solve the N+1 problem.
   
-  // Better approach: Fetch all years strictly.
-  const yearTotals = await Promise.all(years.map(async (year) => {
-    const from = `${year}-01-01T00:00:00Z`
-    const to = `${year}-12-31T23:59:59Z`
-    
-    const yres = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        query: YEAR_QUERY,
-        variables: { login: username, from, to }
-      })
-    })
-    
-    if (yres.ok) {
-      const yjson = await yres.json() as any
-      return yjson.data?.user?.contributionsCollection?.contributionCalendar?.totalContributions || 0
+  if (years.length === 0) {
+    return {
+      days: currentCalendar.weeks.flatMap((w: any) => w.contributionDays),
+      totalContributions: currentCalendar.totalContributions,
+      contributionYears: []
     }
-    return 0
-  }))
+  }
 
-  const allTimeTotal = yearTotals.reduce((a, b) => a + b, 0)
+  // Construct a batch query with aliases for each year
+  const aliasQuery = `
+    query($login: String!) {
+      user(login: $login) {
+        ${years.map(year => `
+          y${year}: contributionsCollection(from: "${year}-01-01T00:00:00Z", to: "${year}-12-31T23:59:59Z") {
+            contributionCalendar {
+              totalContributions
+            }
+          }
+        `).join('\n')}
+      }
+    }
+  `
+
+  const batchRes = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      query: aliasQuery,
+      variables: { login: username }
+    })
+  })
+
+  if (!batchRes.ok) {
+    throw new Error(`GitHub batch API error: ${batchRes.statusText}`)
+  }
+
+  const batchJson = (await batchRes.json()) as any
+  const batchData = batchJson.data?.user || {}
+  
+  const allTimeTotal = Object.values(batchData).reduce((sum: number, collection: any) => {
+    return sum + (collection?.contributionCalendar?.totalContributions || 0)
+  }, 0)
 
   return {
     days: currentCalendar.weeks.flatMap((w: any) => w.contributionDays),
