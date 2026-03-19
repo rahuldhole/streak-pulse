@@ -60,29 +60,29 @@ export function renderSVG(stats: StreakStats, last7: GitHubContributionDay[], ma
       </g>
 
       <!-- Max Streak -->
-      <g transform="translate(${width/2 + 10}, 40)">
+      <g transform="translate(${width / 2 + 10}, 40)">
         <text class="label">Personal Best</text>
         <text y="28" class="stat">🏆 ${stats.max.count} Days</text>
         <text y="45" class="date">${formatDate(stats.max.start)} - ${formatDate(stats.max.end)}</text>
       </g>
 
       <!-- Separator -->
-      <line x1="${width/2}" y1="40" x2="${width/2}" y2="85" stroke="${theme === 'transparent' ? '#00000010' : t.border}" stroke-width="1" />
+      <line x1="${width / 2}" y1="40" x2="${width / 2}" y2="85" stroke="${theme === 'transparent' ? '#00000010' : t.border}" stroke-width="1" />
 
       <!-- Heat Strip -->
       <g transform="translate(${padding}, 110)">
         ${last7.map((d, i) => {
-          const rectW = (width - 2 * padding - 6 * 8) / 7
-          const x = i * (rectW + 8)
-          const color = getIntensityColor(d.contributionCount, maxCount)
-          return `
+    const rectW = (width - 2 * padding - 6 * 8) / 7
+    const x = i * (rectW + 8)
+    const color = getIntensityColor(d.contributionCount, maxCount)
+    return `
             <g transform="translate(${x}, 0)">
               <rect width="${rectW}" height="40" rx="6" fill="${color}"/>
               <text x="${rectW / 2}" y="15" class="day" text-anchor="middle" opacity="0.8">${dayLabels[i]}</text>
               <text x="${rectW / 2}" y="28" class="count" text-anchor="middle">${d.contributionCount}</text>
             </g>
           `
-        }).join('')}
+  }).join('')}
       </g>
     </svg>
   `
@@ -133,9 +133,9 @@ export function renderLandingPage() {
             <div class="form-group">
               <label>Theme</label>
               <div class="themes">
-                <button onclick="setTheme('transparent')" id="theme-transparent" class="active">Transparent</button>
+                <button onclick="setTheme('transparent')" id="theme-transparent">Transparent</button>
                 <button onclick="setTheme('light')" id="theme-light">Light</button>
-                <button onclick="setTheme('dark')" id="theme-dark">Dark</button>
+                <button onclick="setTheme('dark')" id="theme-dark" class="active">Dark</button>
               </div>
             </div>
 
@@ -162,7 +162,7 @@ export function renderLandingPage() {
         </div>
 
         <script>
-          let theme = 'transparent';
+          let theme = 'dark';
           const usernameInput = document.getElementById('username');
           const previewImg = document.getElementById('preview-img');
           const mdCode = document.getElementById('md-code');
