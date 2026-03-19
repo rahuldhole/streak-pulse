@@ -121,7 +121,10 @@ export function renderLandingPage() {
           .card { border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
           .form-group { margin-bottom: 1.5rem; }
           label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
-          input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+          .input-group { display: flex; gap: 0.5rem; }
+          input { flex: 1; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+          .generate-btn { padding: 0.75rem 1.25rem; background: var(--text); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+          .generate-btn:hover { background: #333; }
           .themes { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
           .themes button { flex: 1; padding: 0.5rem; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
           .themes button.active { background: var(--text); color: white; border-color: var(--text); }
@@ -143,7 +146,10 @@ export function renderLandingPage() {
           <div class="card">
             <div class="form-group">
               <label>GitHub Username</label>
-              <input type="text" id="username" placeholder="username" value="rahuldhole">
+              <div class="input-group">
+                <input type="text" id="username" placeholder="username" value="rahuldhole">
+                <button class="generate-btn" onclick="update()">Generate</button>
+              </div>
             </div>
 
             <div class="form-group">
@@ -215,7 +221,9 @@ export function renderLandingPage() {
             setTimeout(() => btn.textContent = original, 2000);
           }
 
-          usernameInput.addEventListener('input', update);
+          usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') update();
+          });
           update();
         </script>
       </body>
