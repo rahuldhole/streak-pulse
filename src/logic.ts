@@ -1,28 +1,56 @@
-import { GitHubContributionDay } from './types'
+export type StreakDetails = {
+  count: number
+  start: string
+  end: string
+}
 
-export function calculateStreak(days: GitHubContributionDay[]): number {
-  if (days.length === 0) return 0
-  
-  const lastIndex = days.length - 1
-  const today = days[lastIndex].contributionCount
-  const yesterday = lastIndex > 0 ? days[lastIndex - 1].contributionCount : 0
+export type StreakStats = {
+  current: StreakDetails
+  max: StreakDetails
+}
 
-  // A streak is broken if both today AND yesterday had no activity.
-  // We allow today to be 0 for a grace period.
-  if (today === 0 && yesterday === 0) return 0
+export function calculateStreakStats(days: GitHubContributionDay[]): StreakStats {
+  const empty = { count: 0, start: '', end: '' }
+  if (days.length === 0) return { current: empty, max: empty }
 
-  let streak = 0
-  // Start counting from the most recent day that had activity (today or yesterday)
-  const startAt = today > 0 ? lastIndex : lastIndex - 1
+  let streaks: StreakDetails[] = []
+  let ongoingStart: string | null = null
+  let ongoingCount = 0
 
-  for (let i = startAt; i >= 0; i--) {
+  for (let i = 0; i < days.length; i++) {
     if (days[i].contributionCount > 0) {
-      streak++
-    } else {
-      break
+      if (!ongoingStart) ongoingStart = days[i].date
+      ongoingCount++
+    } else if (ongoingStart) {
+      streaks.push({ count: ongoingCount, start: ongoingStart, end: days[i - 1].date })
+      ongoingStart = null
+      ongoingCount = 0
     }
   }
-  return streak
+  if (ongoingStart) {
+    streaks.push({ count: ongoingCount, start: ongoingStart, end: days[days.length - 1].date })
+  }
+
+  // Find Max
+  let max: StreakDetails = empty
+  for (const s of streaks) {
+    if (s.count >= max.count) max = s
+  }
+
+  // Determine current active streak
+  const lastIdx = days.length - 1
+  const todayVal = days[lastIdx].contributionCount
+  const yestVal = lastIdx > 0 ? days[lastIdx - 1].contributionCount : 0
+  
+  let current: StreakDetails = empty
+  if (todayVal > 0 || yestVal > 0) {
+    const lastS = streaks[streaks.length - 1]
+    if (lastS && (lastS.end === days[lastIdx].date || lastS.end === days[lastIdx-1].date)) {
+      current = lastS
+    }
+  }
+
+  return { current, max }
 }
 
 export function getIntensityColor(count: number, maxCount: number): string {

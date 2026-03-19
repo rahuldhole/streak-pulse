@@ -1,10 +1,16 @@
 import { GitHubContributionDay, Theme } from './types'
-import { getIntensityColor } from './logic'
+import { getIntensityColor, StreakStats } from './logic'
 
-export function renderSVG(streak: number, last7: GitHubContributionDay[], maxCount: number, theme: Theme = 'transparent') {
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '---'
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export function renderSVG(stats: StreakStats, last7: GitHubContributionDay[], maxCount: number, theme: Theme = 'transparent') {
   const width = 420
-  const height = 160
-  const padding = 20
+  const height = 180
+  const padding = 25
 
   const themes = {
     light: {
@@ -12,18 +18,21 @@ export function renderSVG(streak: number, last7: GitHubContributionDay[], maxCou
       border: '#E2E8F0',
       text: '#0F172A',
       textMuted: '#64748B',
+      accent: '#22c55e'
     },
     dark: {
       bg: '#0B1220',
       border: '#1E293B',
       text: '#FFFFFF',
       textMuted: '#94A3B8',
+      accent: '#22c55e'
     },
     transparent: {
       bg: 'none',
       border: 'none',
       text: '#626a75ff',
       textMuted: '#576374ff',
+      accent: '#15af4eff'
     }
   }
 
@@ -32,34 +41,49 @@ export function renderSVG(streak: number, last7: GitHubContributionDay[], maxCou
 
   return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
-      ${t.bg !== 'none' ? `<rect width="${width}" height="${height}" rx="16" fill="${t.bg}"/>` : ''}
-      ${t.border !== 'none' ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="15.5" stroke="${t.border}"/>` : ''}
+      <style>
+        .label { font: bold 10px sans-serif; fill: ${t.textMuted}; text-transform: uppercase; letter-spacing: 1px; }
+        .stat { font: bold 22px sans-serif; fill: ${t.text}; }
+        .date { font: 10px sans-serif; fill: ${t.textMuted}; }
+        .day { font: 9px sans-serif; fill: #ffffff; }
+        .count { font: bold 11px sans-serif; fill: #ffffff; }
+      </style>
+      
+      ${t.bg !== 'none' ? `<rect width="${width}" height="${height}" rx="20" fill="${t.bg}"/>` : ''}
+      ${t.border !== 'none' ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="19.5" stroke="${t.border}"/>` : ''}
 
-      <!-- Streak Text -->
-      <text x="${padding}" y="40" fill="${t.text}" font-family="sans-serif" font-size="20" font-weight="bold">
-        🔥 ${streak} day streak
-      </text>
-      <text x="${padding}" y="60" fill="${t.textMuted}" font-family="sans-serif" font-size="12">
-        based on consecutive contribution days
-      </text>
+      <!-- Current Streak -->
+      <g transform="translate(${padding}, 40)">
+        <text class="label">Current Streak</text>
+        <text y="28" class="stat">🔥 ${stats.current.count} Days</text>
+        <text y="45" class="date">${formatDate(stats.current.start)} - ${formatDate(stats.current.end)}</text>
+      </g>
+
+      <!-- Max Streak -->
+      <g transform="translate(${width/2 + 10}, 40)">
+        <text class="label">Personal Best</text>
+        <text y="28" class="stat">🏆 ${stats.max.count} Days</text>
+        <text y="45" class="date">${formatDate(stats.max.start)} - ${formatDate(stats.max.end)}</text>
+      </g>
+
+      <!-- Separator -->
+      <line x1="${width/2}" y1="40" x2="${width/2}" y2="85" stroke="${theme === 'transparent' ? '#00000010' : t.border}" stroke-width="1" />
 
       <!-- Heat Strip -->
-      ${last7.map((d, i) => {
-    const x = padding + i * ((width - 2 * padding - 6 * 8) / 7 + 8)
-    const rectW = (width - 2 * padding - 6 * 8) / 7
-    const color = getIntensityColor(d.contributionCount, maxCount)
-    return `
-          <g>
-            <rect x="${x}" y="85" width="${rectW}" height="45" rx="8" fill="${color}"/>
-            <text x="${x + rectW / 2}" y="105" fill="#ffffffff" font-family="sans-serif" font-size="10" text-anchor="middle">
-              ${dayLabels[i]}
-            </text>
-            <text x="${x + rectW / 2}" y="120" fill="#ffffffff" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">
-              ${d.contributionCount}
-            </text>
-          </g>
-        `
-  }).join('')}
+      <g transform="translate(${padding}, 110)">
+        ${last7.map((d, i) => {
+          const rectW = (width - 2 * padding - 6 * 8) / 7
+          const x = i * (rectW + 8)
+          const color = getIntensityColor(d.contributionCount, maxCount)
+          return `
+            <g transform="translate(${x}, 0)">
+              <rect width="${rectW}" height="40" rx="6" fill="${color}"/>
+              <text x="${rectW / 2}" y="15" class="day" text-anchor="middle" opacity="0.8">${dayLabels[i]}</text>
+              <text x="${rectW / 2}" y="28" class="count" text-anchor="middle">${d.contributionCount}</text>
+            </g>
+          `
+        }).join('')}
+      </g>
     </svg>
   `
 }
