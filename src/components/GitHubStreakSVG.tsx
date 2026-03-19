@@ -125,8 +125,8 @@ export function GitHubStreakSVG({
           return (
             <g transform={`translate(${x}, 0)`} key={d.date}>
               <rect width={rectW} height="40" rx="6" fill={color}/>
-              <text x={rectW / 2} y="15" class="day" text-anchor="middle" opacity="0.8">{dayLabels[i]}</text>
-              <text x={rectW / 2} y="28" class="count" text-anchor="middle">{d.contributionCount}</text>
+              <text x={rectW / 2} y="11" class="day" text-anchor="middle" dominant-baseline="central" opacity="0.8">{dayLabels[i]}</text>
+              <text x={rectW / 2} y="30" class="count" text-anchor="middle" dominant-baseline="central">{d.contributionCount}</text>
             </g>
           )
         })}
