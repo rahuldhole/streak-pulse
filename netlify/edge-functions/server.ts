@@ -1,3 +1,4 @@
+import { handle } from "hono/netlify";
 import app from "../../src/index.ts";
 
-export default app;
+export default handle(app);
