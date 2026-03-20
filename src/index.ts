@@ -79,8 +79,7 @@ app.all('/', async (c) => {
     const headers = {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'public, max-age=3600, s-maxage=7200',
-      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=604800',
-      'X-Cache': 'MISS'
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=604800'
     }
 
     const finalResponse = c.body(svg.toString(), 200, headers)
