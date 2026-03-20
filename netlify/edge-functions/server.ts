@@ -5,7 +5,7 @@ import app from "../../src/index.ts";
 export default async (request: Request, context: any) => {
   try {
     const env = context?.env ?? (typeof Deno !== "undefined" ? (Deno as any).env.toObject() : {});
-    return await app.fetch(request, env);
+    return await app.fetch(request, env, context);
   } catch (err) {
     console.error("Edge function error:", err);
     return new Response("Internal Server Error", { status: 500 });

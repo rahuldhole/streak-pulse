@@ -15,18 +15,33 @@ app.all('/', async (c) => {
 
   if (!username) {
     c.header('Cache-Control', 'public, max-age=86400, s-maxage=86400')
+    c.header('Netlify-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
     const origin = url.origin
     return c.html(renderLandingPage(origin))
   }
 
-  // Cloudflare Cache API: Store the rendered SVG to avoid redundant Worker executions and GitHub API calls.
-  // We check for 'caches' existence to remain compatible with Netlify or other runtimes.
-  const cache = typeof caches !== 'undefined' ? (caches as any).default : null
+  // Cache API: Store the rendered SVG to avoid redundant executions and GitHub API calls.
+  // We check for 'caches' existence and use environment-specific defaults.
+  let cache: any = null
+  try {
+    if (typeof caches !== 'undefined') {
+      // Cloudflare uses 'caches.default', while Netlify/Deno standard is 'caches.open'
+      cache = (caches as any).default || (await caches.open('streak-cache'))
+    }
+  } catch (e) {
+    console.error('Cache API not available:', e)
+  }
+
   const cacheKey = cache ? new Request(url.toString(), c.req.raw) : null
   
   if (cache && cacheKey) {
     let response = await cache.match(cacheKey)
-    if (response) return response
+    if (response) {
+      // Return cached response with an added header for observability
+      const cachedResponse = new Response(response.body, response)
+      cachedResponse.headers.set('X-Cache', 'HIT')
+      return cachedResponse
+    }
   }
 
   const token = c.env.GITHUB_TOKEN
@@ -58,14 +73,22 @@ app.all('/', async (c) => {
     }
 
     const svg = renderSVG(stats, last7, maxCount, theme)
-    const finalResponse = c.body(svg.toString(), 200, {
+    
+    // Set headers for Netlify and other CDNs
+    // stale-while-revalidate=604800 (1 week) allows serving slightly stale content while fetching fresh data in the background.
+    const headers = {
       'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=3600, s-maxage=7200'
-    })
+      'Cache-Control': 'public, max-age=3600, s-maxage=7200',
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=604800',
+      'X-Cache': 'MISS'
+    }
 
-    // Populate cache asynchronously if supported (Cloudflare)
-    if (cache && cacheKey && 'executionCtx' in c && (c as any).executionCtx?.waitUntil) {
-      (c as any).executionCtx.waitUntil(cache.put(cacheKey, finalResponse.clone()))
+    const finalResponse = c.body(svg.toString(), 200, headers)
+
+    // Populate cache asynchronously if supported (Cloudflare/Netlify)
+    const executionCtx = (c as any).executionCtx
+    if (cache && cacheKey && executionCtx?.waitUntil) {
+      executionCtx.waitUntil(cache.put(cacheKey, finalResponse.clone()))
     }
     return finalResponse
 

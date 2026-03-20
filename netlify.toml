@@ -1,3 +1,4 @@
 [[edge_functions]]
   path = "/*"
   function = "server"
+  cache = "manual"
