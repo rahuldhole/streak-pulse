@@ -32,15 +32,18 @@ app.all('/', async (c) => {
     console.error('Cache API not available:', e)
   }
 
-  const cacheKey = cache ? new Request(url.toString(), c.req.raw) : null
-  
+  const cacheKey = cache ? new Request(url.toString(), c.req.raw) : null;
+
   if (cache && cacheKey) {
-    let response = await cache.match(cacheKey)
+    let response = await cache.match(cacheKey);
     if (response) {
-      // Return cached response with an added header for observability
-      const cachedResponse = new Response(response.body, response)
-      cachedResponse.headers.set('X-Cache', 'HIT')
-      return cachedResponse
+      const age = response.headers.get('Age');
+      // If the cached item is older than 1 hour (3600s), ignore it and fetch fresh
+      if (age && parseInt(age) < 3600) {
+        const cachedResponse = new Response(response.body, response);
+        cachedResponse.headers.set('X-Cache', 'HIT');
+        return cachedResponse;
+      }
     }
   }
 
@@ -78,9 +81,9 @@ app.all('/', async (c) => {
     // stale-while-revalidate=604800 (1 week) allows serving slightly stale content while fetching fresh data in the background.
     const headers = {
       'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=3600, s-maxage=7200',
-      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=604800'
-    }
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' 
+    };
 
     const finalResponse = c.body(svg.toString(), 200, headers)
 
