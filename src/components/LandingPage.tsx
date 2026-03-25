@@ -62,7 +62,7 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
         </head>
         <body>
           <div class="container">
-            <h1>🔥 GitHub Streak</h1>
+            <h1>🔥 GitHub Streak <span style="font-size: 0.7rem;">v{version}</span></h1>
             <p>Generate a Duolingo-inspired GitHub streak widget for your profile.</p>
 
             <div class="card">
