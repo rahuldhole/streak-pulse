@@ -61,9 +61,9 @@ export async function fetchGitHubData(username: string, token: string, targetYea
     resetAt: new Date(parseInt(resetAt) * 1000).toISOString() 
   } : undefined
 
-  // LIGHT MODE: If we only need the current year's streak data
-  if (targetYear && targetYear === new Date().getFullYear()) {
-    const allDays = currentCalendar.weeks.flatMap((w: any) => w.contributionDays)
+  // LIGHT MODE: If we only need the current year's streak data (optimized fetch)
+  if (targetYear && Number(targetYear) === new Date().getFullYear()) {
+    const allDays = currentCalendar.weeks?.flatMap((w: any) => w.contributionDays) || []
     const cyTotal = allDays
       .filter((d: any) => d.date.startsWith(targetYear.toString()))
       .reduce((sum: number, d: any) => sum + d.contributionCount, 0)
@@ -77,9 +77,11 @@ export async function fetchGitHubData(username: string, token: string, targetYea
   }
 
   if (years.length === 0) {
+    const allDays = currentCalendar.weeks?.flatMap((w: any) => w.contributionDays) || []
+    const rollingTotal = allDays.reduce((sum: number, d: any) => sum + d.contributionCount, 0)
     return {
-      days: currentCalendar.weeks.flatMap((w: any) => w.contributionDays),
-      totalContributions: currentCalendar.totalContributions,
+      days: allDays,
+      totalContributions: rollingTotal,
       contributionYears: [],
       rateLimit
     }

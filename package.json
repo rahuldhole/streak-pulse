@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bunx netlify dev",
     "dev:cf": "wrangler dev --ip 0.0.0.0",
-    "test": "bun test",
+    "test": "bun test --max-concurrency=1",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
