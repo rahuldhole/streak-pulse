@@ -51,17 +51,21 @@ app.all('*', async (c) => {
 
   if (c.req.path === '/sample.svg') {
     const mockStats = { 
-      current: { count: parseInt(c.req.query('current') || '42'), start: '2024-01-01', end: '2024-02-12' }, 
-      max: { count: parseInt(c.req.query('max') || '99'), start: '2023-05-10', end: '2023-08-17' }, 
-      total: parseInt(c.req.query('total') || '1337'),
+      current: { count: 42, start: '2024-01-01', end: '2024-02-12' }, 
+      max: { count: 99, start: '2023-05-10', end: '2023-08-17' }, 
+      total: 1337,
       yearRange: '2015 - 2024'
     }
-    const mockLast7 = Array.from({ length: 7 }, (_, i) => ({ 
-      contributionCount: Math.floor(Math.random() * 10), 
-      date: new Date(Date.now() - (6-i) * 86400000).toISOString().split('T')[0] 
-    }))
-    const mockTheme = (c.req.query('theme') || 'dark') as Theme
-    const svg = renderSVG(mockStats as any, mockLast7 as any, 10, mockTheme)
+    const mockLast7 = [
+      { contributionCount: 4, date: '2024-03-01' },
+      { contributionCount: 10, date: '2024-03-02' },
+      { contributionCount: 2, date: '2024-03-03' },
+      { contributionCount: 8, date: '2024-03-04' },
+      { contributionCount: 5, date: '2024-03-05' },
+      { contributionCount: 7, date: '2024-03-06' },
+      { contributionCount: 3, date: '2024-03-07' }
+    ]
+    const svg = renderSVG(mockStats as any, mockLast7 as any, 10, (c.req.query('theme') || 'dark') as Theme)
     return c.body(svg.toString(), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' })
   }
 
