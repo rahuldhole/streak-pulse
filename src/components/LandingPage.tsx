@@ -1,10 +1,12 @@
 /** @jsxImportSource hono/jsx */
 import { html } from 'hono/html'
+import pkg from '../../package.json'
 
 export function LandingPage({ origin = '' }: { origin?: string }) {
   const initialUser = 'rahuldhole'
   const initialTheme = 'dark'
-  const cardUrl = `${origin}/?user=${initialUser}&theme=${initialTheme}`
+  const version = pkg.version
+  const cardUrl = `${origin}/?user=${initialUser}&theme=${initialTheme}&v=${version}`
   const markdown = `![Github Streak](${cardUrl})`
   const htmlCode = `<img src="${cardUrl}" alt="Github Streak" />`
   const escapedHtml = htmlCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -104,6 +106,7 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
           {html`
           <script>
             let theme = '${initialTheme}';
+            const version = '${version}';
             const usernameInput = document.getElementById('username');
             const previewImg = document.getElementById('preview-img');
             const mdCode = document.getElementById('md-code');
@@ -128,7 +131,7 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
               }
 
               const baseUrl = window.location.origin;
-              const cardUrl = \`\${baseUrl}/?user=\${user}&theme=\${theme}\`;
+              const cardUrl = \`\${baseUrl}/?user=\${user}&theme=\${theme}&v=\${version}\`;
               
               generateBtn.textContent = 'Generating...';
               generateBtn.disabled = true;
