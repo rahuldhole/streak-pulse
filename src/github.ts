@@ -1,4 +1,4 @@
-import { GitHubContributionDay, GitHubResponse } from './types.ts'
+import { GitHubContributionDay } from './types.ts'
 
 const GITHUB_GRAPHQL_QUERY = `
 query($login:String!) {
@@ -18,7 +18,7 @@ query($login:String!) {
   }
 }`
 
-export async function fetchGitHubData(username: string, token: string): Promise<{ 
+export async function fetchGitHubData(username: string, token: string, targetYear?: number): Promise<{ 
   days: GitHubContributionDay[], 
   totalContributions: number, 
   contributionYears: number[],
@@ -61,8 +61,15 @@ export async function fetchGitHubData(username: string, token: string): Promise<
     resetAt: new Date(parseInt(resetAt) * 1000).toISOString() 
   } : undefined
 
-  // The first call returns the last 365 days of contributions, which we use for the streak display.
-  // ... (rest of the logic remains similar but returns rateLimit)
+  // LIGHT MODE: If we only need the current year's streak data
+  if (targetYear && targetYear === new Date().getFullYear()) {
+    return {
+      days: currentCalendar.weeks.flatMap((w: any) => w.contributionDays),
+      totalContributions: currentCalendar.totalContributions,
+      contributionYears: [targetYear],
+      rateLimit
+    }
+  }
 
   if (years.length === 0) {
     return {
@@ -74,14 +81,13 @@ export async function fetchGitHubData(username: string, token: string): Promise<
   }
 
   const CHUNK_SIZE = 5
-
-  // Split years into chunks of CHUNK_SIZE
+  // Split years into chunks
   const chunks: number[][] = []
   for (let i = 0; i < years.length; i += CHUNK_SIZE) {
     chunks.push(years.slice(i, i + CHUNK_SIZE))
   }
 
-  // Build one GraphQL query per chunk using aliased contributionsCollection fields
+  // Build aliased GraphQL query per chunk
   const buildChunkQuery = (chunk: number[]) => `
     query($login: String!) {
       user(login: $login) {

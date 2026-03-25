@@ -110,6 +110,9 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
             <div class="footer">
               Built by <a href="https://rahuldhole.com" target="_blank">Rahul Dhole</a> | 
               <a href="https://github.com/rahuldhole/github-streak" target="_blank">GitHub Repository</a>
+              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text)', fontWeight: '500' }}>
+                💡 <b>Pro Tip:</b> If your streak looks stale after deleting years old repos, add <code>&no-cache=true</code> to your URL to force a refresh.
+              </p>
               <p style={{ marginTop: '1rem', fontSize: '0.7rem' }}>
                 Notice an error? Please open a <a href="https://github.com/rahuldhole/github-streak/issues" target="_blank">GitHub Issue</a> or <a href="https://github.com/rahuldhole/github-streak/pulls" target="_blank">Pull Request</a>.
               </p>

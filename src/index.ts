@@ -20,7 +20,6 @@ let githubRateLimitResetAt = 0
 app.onError((err, c) => {
   console.error('App Error:', err)
   const message = err.message || 'Internal Server Error'
-  
   if (c.req.query('user') !== undefined) {
     c.header('Vary', 'Accept')
     return c.body(renderErrorSVG(message).toString(), 200, {
@@ -28,7 +27,6 @@ app.onError((err, c) => {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
     })
   }
-  
   const status = (err as any).status || 500
   c.header('Vary', 'Accept')
   return c.html(`<h1>Error: ${message}</h1>`, status)
@@ -42,7 +40,6 @@ app.notFound((c) => {
       'Cache-Control': 'no-store, no-cache, must-revalidate'
     })
   }
-  
   c.header('Vary', 'Accept')
   return c.html('<h1>404 Not Found</h1>', 404)
 })
@@ -90,6 +87,7 @@ app.all('*', async (c) => {
   const username = queryUser.trim()
   const theme = (c.req.query('theme') || 'transparent') as Theme
   const type = c.req.query('type')
+  const forceRefresh = c.req.query('no-cache') === 'true'
 
   if (!username || !GITHUB_USERNAME_REGEX.test(username)) {
     c.header('Vary', 'Accept')
@@ -99,7 +97,6 @@ app.all('*', async (c) => {
     })
   }
 
-  // Rate limiting (in-memory)
   const ip = c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip') || 'unknown'
   const now = Date.now()
   const userLimit = ipRateLimit.get(ip)
@@ -116,80 +113,79 @@ app.all('*', async (c) => {
     ipRateLimit.set(ip, { count: 1, reset: now + RATE_LIMIT_WINDOW })
   }
 
-  // NETLIFY BLOBS CACHING
   const streakStore = getStore('streak-data')
-  let cachedData: any = null
+  const historyKey = `${username}:history`
+  const currentKey = `${username}:current`
+  const currentYear = new Date().getFullYear()
+
+  let historyBlob: any = null
+  let currentBlob: any = null
   
   try {
-    if (!c.req.query('no-cache')) {
-      cachedData = await streakStore.get(username, { type: 'json' })
-    }
+    historyBlob = await streakStore.get(historyKey, { type: 'json' })
+    currentBlob = await streakStore.get(currentKey, { type: 'json' })
   } catch (e) {
     console.error('Blob fetch failed:', e)
   }
 
-  let finalData = cachedData
-  let lastUpdated = cachedData?.timestamp ? new Date(cachedData.timestamp).toLocaleTimeString() : undefined
-
-  // Re-fetch if no cache or cache older than 1 hour
-  const isStale = !cachedData || (Date.now() - cachedData.timestamp > 3600000)
-
-  if (isStale || c.req.query('no-cache')) {
+  const isCurrentStale = !currentBlob || (Date.now() - currentBlob.timestamp > 3600000)
+  
+  if (isCurrentStale || forceRefresh || !historyBlob) {
     const token = c.env.GITHUB_TOKEN
-    if (!token) {
-      return c.body(renderErrorSVG('Config Error').toString(), 200, {
-        'Content-Type': 'image/svg+xml',
-        'Cache-Control': 'no-store'
-      })
-    }
+    if (!token) return c.body(renderErrorSVG('Config Error').toString(), 200, { 'Content-Type': 'image/svg+xml' });
 
     try {
-      const { days, totalContributions, contributionYears, rateLimit } = await fetchGitHubData(username, token)
+      // TIERED FETCH: If we have history, only fetch the current year
+      const targetYear = (historyBlob && !forceRefresh) ? currentYear : undefined
+      const fresh = await fetchGitHubData(username, token, targetYear)
       
-      if (rateLimit) {
-        githubRateLimitRemaining = rateLimit.remaining
-        githubRateLimitResetAt = new Date(rateLimit.resetAt).getTime()
+      if (fresh.rateLimit) {
+        githubRateLimitRemaining = fresh.rateLimit.remaining
+        githubRateLimitResetAt = new Date(fresh.rateLimit.resetAt).getTime()
       }
 
-      const stats = calculateStreakStats(days, totalContributions, contributionYears)
-      const last7 = days.slice(-7)
+      // If we did a full fetch (no targetYear set), calculate and update history
+      if (!targetYear) {
+        const histTotal = fresh.totalContributions - fresh.days.filter(d => d.date.startsWith(currentYear.toString())).reduce((a, b) => a + b.contributionCount, 0)
+        historyBlob = { total: histTotal, years: fresh.contributionYears.filter(y => y !== currentYear) }
+        await streakStore.setJSON(historyKey, historyBlob).catch(() => {})
+      }
+
+      const stats = calculateStreakStats(fresh.days, fresh.totalContributions, fresh.contributionYears)
+      const last7 = fresh.days.slice(-7)
       const maxCount = Math.max(...last7.map(d => d.contributionCount), 1)
 
-      finalData = { stats, last7, maxCount, timestamp: Date.now() }
-      lastUpdated = new Date(finalData.timestamp).toLocaleTimeString()
-
-      // Async write to blobs
-      const executionCtx = (c as any).executionCtx
-      if (executionCtx?.waitUntil) {
-        executionCtx.waitUntil(streakStore.setJSON(username, finalData).catch(() => {}))
-      } else {
-        await streakStore.setJSON(username, finalData).catch(() => {})
-      }
+      currentBlob = { stats, last7, maxCount, timestamp: Date.now() }
+      await streakStore.setJSON(currentKey, currentBlob).catch(() => {})
     } catch (error: any) {
-      if (cachedData) {
-        // Fallback to stale data on error
-        finalData = cachedData
+      if (currentBlob) {
+        // Fallback to stale data
       } else {
         const isNotFound = error.message?.includes('not found')
-        return c.body(renderErrorSVG(isNotFound ? 'User Not Found' : 'GitHub API Error').toString(), 200, {
-          'Content-Type': 'image/svg+xml',
-          'Cache-Control': 'no-store'
-        })
+        return c.body(renderErrorSVG(isNotFound ? 'User Not Found' : 'GitHub API Error').toString(), 200, { 'Content-Type': 'image/svg+xml' });
       }
     }
   }
+
+  // Final Aggregation: Combine cached history with current data
+  // Even if we fetched 'fresh', the fresh.totalContributions is already correct in currentBlob.stats.total
+  // But if history exists, we should ensure the combined total reflects both.
+  // Actually, if we fetch 'onlyCurrent', fresh.totalContributions IS the total for the current calendar (last 365 days).
+  // So we merge: history.total + currentBlob.stats.total
+  const aggregatedTotal = (historyBlob?.total || 0) + currentBlob.stats.total
+  const lastUpdated = new Date(currentBlob.timestamp).toLocaleTimeString()
 
   if (type === 'json') {
     c.header('Vary', 'Accept')
-    return c.json({ username, ...finalData, theme })
+    return c.json({ username, ...currentBlob, total: aggregatedTotal, theme })
   }
 
-  const svg = renderSVG(finalData.stats, finalData.last7, finalData.maxCount, theme, lastUpdated)
+  const svg = renderSVG({ ...currentBlob.stats, total: aggregatedTotal }, currentBlob.last7, currentBlob.maxCount, theme, lastUpdated)
   return c.body(svg.toString(), 200, {
     'Content-Type': 'image/svg+xml',
     'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
     'Vary': 'Accept',
-    'X-Cache': isStale ? 'MISS' : 'HIT'
+    'X-Cache': isCurrentStale ? 'MISS' : 'HIT'
   })
 })
 
