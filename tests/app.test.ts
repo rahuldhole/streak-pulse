@@ -8,9 +8,10 @@ describe("Application Routes and Status Codes", () => {
         expect(res.headers.get("Content-Type")).toContain("text/html");
     });
 
-    test("GET /?user=invalid! (Bad Request)", async () => {
+    test("GET /?user=invalid! (Bad Request SVG)", async () => {
         const res = await app.request("/?user=invalid!");
-        expect(res.status).toBe(400);
+        // Status must be 200 for GitHub Camo to display the error SVG
+        expect(res.status).toBe(200);
         expect(res.headers.get("Content-Type")).toContain("image/svg+xml");
         const body = await res.text();
         expect(body).toContain("Invalid Username");
@@ -26,7 +27,8 @@ describe("Application Routes and Status Codes", () => {
            }));
         }
         
-        const statuses = responses.map(r => r.status);
-        expect(statuses).toContain(429);
+        // All responses should be 200 for Camo, but the last ones should be rate limited
+        const bodies = await Promise.all(responses.map(r => r.text()));
+        expect(bodies.some(b => b.includes("Rate Limit Exceeded"))).toBe(true);
     });
 });
