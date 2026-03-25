@@ -4,6 +4,9 @@ import { Bindings, Theme } from './types.ts'
 import { fetchGitHubData } from './github.ts'
 import { calculateStreakStats } from './logic.ts'
 import { renderSVG, renderLandingPage, renderErrorSVG } from './renderer.tsx'
+import pkg from '../package.json' with { type: 'json' }
+
+const cacheStoreVersion = pkg.cacheStoreVersion
 
 export const app = new Hono<{ Bindings: Bindings }>()
 
@@ -128,15 +131,19 @@ app.all('*', async (c) => {
     console.error('Blob fetch failed:', e)
   }
 
-  const isCurrentStale = !currentBlob || (Date.now() - currentBlob.timestamp > 3600000)
+  const storedVersion = Number(currentBlob?.cacheVersion || 0)
+  const activeVersion = Number(cacheStoreVersion || 0)
+  const isVersionStale = storedVersion < activeVersion
+
+  const isCurrentStale = isVersionStale || !currentBlob || (Date.now() - currentBlob.timestamp > 3600000)
   
   if (isCurrentStale || forceRefresh || !historyBlob) {
     const token = c.env.GITHUB_TOKEN
     if (!token) return c.body(renderErrorSVG('Config Error').toString(), 200, { 'Content-Type': 'image/svg+xml' });
 
     try {
-      // TIERED FETCH: If we have history, only fetch the current year
-      const targetYear = (historyBlob && !forceRefresh) ? currentYear : undefined
+      // TIERED FETCH: If we have history AND the version is current, only fetch the current year
+      const targetYear = (historyBlob && !forceRefresh && !isVersionStale) ? currentYear : undefined
       const fresh = await fetchGitHubData(username, token, targetYear)
       
       if (fresh.rateLimit) {
@@ -151,7 +158,11 @@ app.all('*', async (c) => {
       // If we did a full fetch (no targetYear set), calculate and update history
       if (!targetYear) {
         const histTotal = fresh.totalContributions - currentYearTotal
-        historyBlob = { total: histTotal, years: fresh.contributionYears.filter(y => y !== currentYear) }
+        historyBlob = { 
+          total: histTotal, 
+          years: fresh.contributionYears.filter(y => y !== currentYear),
+          cacheVersion: activeVersion
+        }
         await streakStore.setJSON(historyKey, historyBlob).catch(() => {})
       }
 
@@ -159,7 +170,7 @@ app.all('*', async (c) => {
       const last7 = fresh.days.slice(-7)
       const maxCount = Math.max(...last7.map(d => d.contributionCount), 1)
 
-      currentBlob = { stats, last7, maxCount, timestamp: Date.now() }
+      currentBlob = { stats, last7, maxCount, timestamp: Date.now(), cacheVersion: activeVersion }
       await streakStore.setJSON(currentKey, currentBlob).catch(() => {})
     } catch (error: any) {
       if (currentBlob) {

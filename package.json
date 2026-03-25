@@ -1,6 +1,7 @@
 {
   "name": "github-streak",
   "version": "0.0.4",
+  "cacheStoreVersion": "2",
   "type": "module",
   "scripts": {
     "dev": "bunx netlify dev",

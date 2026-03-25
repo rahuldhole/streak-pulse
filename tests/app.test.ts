@@ -43,11 +43,12 @@ describe("Application Routes and Status Codes", () => {
                       { contributionCount: 2, date: '2024-01-02' }
                     ], 
                     maxCount: 2, 
-                    timestamp: Date.now() 
+                    timestamp: Date.now(),
+                    cacheVersion: 2
                 };
             }
             if (key.includes(':history')) {
-              return { total: 90, years: [2023] };
+              return { total: 90, years: [2023], cacheVersion: 2 };
             }
             return null;
         });
