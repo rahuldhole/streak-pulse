@@ -22,7 +22,7 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
           <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>" />
           <style>
             {html`
-            :root { --bg: #ffffff; --text: #1a1a1a; --muted: #666666; --border: #e1e4e8; --accent: #2c974b; }
+            :root { --bg: #ffffff; --text: #1a1a1a; --muted: #666666; --border: #e1e4e8; --accent: #2c974b; --error: #d73a49; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; margin: 0; padding: 1rem; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
             .container { width: 100%; max-width: 600px; }
             h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center; }
@@ -37,8 +37,10 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
             .themes { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
             .themes button { flex: 1; padding: 0.5rem; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; min-width: 80px; }
             .themes button.active { background: var(--text); color: white; border-color: var(--text); }
-            .preview { display: flex; justify-content: center; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; background: #f6f8fa; margin-top: 1.5rem; min-height: 120px; overflow: hidden; }
+            .preview { display: flex; justify-content: center; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; background: #f6f8fa; margin-top: 1rem; min-height: 120px; overflow: hidden; }
             .preview img { max-width: 100%; height: auto; }
+            .error-banner { display: none; background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; padding: 0.75rem; border-radius: 6px; font-size: 0.8rem; margin-top: 1rem; text-align: center; }
+            .error-banner a { color: #c53030; font-weight: 600; text-decoration: underline; }
             .code-box { position: relative; margin-top: 1.5rem; }
             pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto; margin: 0; color: #24292e; border: 1px solid var(--border); }
             .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.4rem 0.8rem; border: 1px solid var(--border); background: white; border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
@@ -79,6 +81,8 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
                 </div>
               </div>
 
+              <div id="error-banner" class="error-banner"></div>
+
               <div class="preview">
                 <img id="preview-img" src={cardUrl} alt="Github Streak Preview" />
               </div>
@@ -111,11 +115,12 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
             const previewImg = document.getElementById('preview-img');
             const mdCode = document.getElementById('md-code');
             const htmlCode = document.getElementById('html-code');
+            const errorBanner = document.getElementById('error-banner');
             const generateBtn = document.querySelector('.generate-btn');
 
             const GITHUB_USERNAME_REGEX = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 
-            function update() {
+            async function update() {
               const user = usernameInput.value.trim();
               
               if (!user || !GITHUB_USERNAME_REGEX.test(user)) {
@@ -130,6 +135,7 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
                 return;
               }
 
+              errorBanner.style.display = 'none';
               const baseUrl = window.location.origin;
               const cardUrl = \`\${baseUrl}/?user=\${user}&theme=\${theme}&v=\${version}\`;
               
@@ -137,28 +143,38 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
               generateBtn.disabled = true;
               generateBtn.style.opacity = '0.7';
 
-              previewImg.onload = () => {
-                generateBtn.textContent = 'Generate';
-                generateBtn.disabled = false;
-                generateBtn.style.opacity = '1';
-              };
-
-              previewImg.onerror = () => {
-                generateBtn.textContent = 'Error';
-                generateBtn.disabled = false;
-                generateBtn.style.opacity = '1';
-                setTimeout(() => {
+              try {
+                const response = await fetch(cardUrl);
+                if (!response.ok) {
+                  let message = 'Something went wrong.';
+                  if (response.status === 404) message = 'GitHub User not found.';
+                  if (response.status === 429) message = 'Too many requests. Please slow down.';
+                  if (response.status === 503) message = 'GitHub API is unavailable or rate limited.';
+                  
+                  errorBanner.innerHTML = \`\${message} Please try again or <a href="https://github.com/rahuldhole/github-streak/issues" target="_blank">create an issue</a>.\`;
+                  errorBanner.style.display = 'block';
+                  generateBtn.textContent = 'Error';
+                } else {
+                  previewImg.src = cardUrl;
+                  const markdown = \`![Github Streak](\${cardUrl})\`;
+                  const htmlStr = \`<img src="\${cardUrl}" alt="Github Streak" />\`;
+                  mdCode.textContent = markdown;
+                  htmlCode.textContent = htmlStr;
                   generateBtn.textContent = 'Generate';
-                }, 2000);
-              };
-
-              previewImg.src = cardUrl;
-              
-              const markdown = \`![Github Streak](\${cardUrl})\`;
-              const htmlStr = \`<img src="\${cardUrl}" alt="Github Streak" />\`;
-              
-              mdCode.textContent = markdown;
-              htmlCode.textContent = htmlStr;
+                }
+              } catch (err) {
+                errorBanner.innerHTML = \`Network error. Please try again or <a href="https://github.com/rahuldhole/github-streak/issues" target="_blank">create an issue</a>.\`;
+                errorBanner.style.display = 'block';
+                generateBtn.textContent = 'Error';
+              } finally {
+                generateBtn.disabled = false;
+                generateBtn.style.opacity = '1';
+                if (generateBtn.textContent === 'Error') {
+                  setTimeout(() => {
+                    generateBtn.textContent = 'Generate';
+                  }, 2000);
+                }
+              }
             }
 
             function setTheme(t) {
