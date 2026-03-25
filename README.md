@@ -103,16 +103,6 @@ Instead of vanity stats, it focuses on:
 * habit reinforcement
 
 ---
+# Contributing
 
-## 🛠️ Development & Cache Management
-
-### 🔄 Forced Cache Refresh
-
-To force a full recalculation of the cache (history + current) for all users, update the `cacheStoreVersion` in `package.json`:
-
-1.  Open `package.json`.
-2.  Increment the `"cacheStoreVersion"` (e.g., change `"2"` to `"3"`).
-3.  Deploy.
-
-The system compares this version against the one stored in the cache. If the `package.json` version is higher, it triggers a full fetch from the GitHub API, ensuring your latest logic is applied to all data.
-
+To contribute to this project, please follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
