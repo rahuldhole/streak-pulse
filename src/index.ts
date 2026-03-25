@@ -20,11 +20,13 @@ let githubRateLimitResetAt = 0
 // Global error handler
 app.onError((err, c) => {
   console.error('App Error:', err)
-  const isUserRequested = !!c.req.query('user')
+  // Re-extract username to decide on format
+  const url = new URL(c.req.url)
+  const username = c.req.query('user') || url.searchParams.get('user')
   const message = err.message || 'Internal Server Error'
   const errorSvg = renderErrorSVG(message)
   
-  if (isUserRequested) {
+  if (username !== null && username !== undefined) {
     // MUST BE 200 FOR GITHUB CAMO
     return c.body(errorSvg.toString(), 200, {
       'Content-Type': 'image/svg+xml',
@@ -36,8 +38,9 @@ app.onError((err, c) => {
 })
 
 app.notFound((c) => {
-  const isUserRequested = !!c.req.query('user')
-  if (isUserRequested) {
+  const url = new URL(c.req.url)
+  const username = c.req.query('user') || url.searchParams.get('user')
+  if (username !== null && username !== undefined) {
     // MUST BE 200 FOR GITHUB CAMO
     return c.body(renderErrorSVG('Path Not Found').toString(), 200, {
       'Content-Type': 'image/svg+xml',
@@ -48,10 +51,13 @@ app.notFound((c) => {
 })
 
 app.all('*', async (c) => {
-  const username = c.req.query('user')
   const url = new URL(c.req.url)
+  const queryUser = c.req.query('user')
+  const searchUser = url.searchParams.get('user')
+  const rawUsername = queryUser !== undefined ? queryUser : searchUser
 
-  if (!username) {
+  // If NO 'user' parameter is present (strictly null/undefined), show landing page on root
+  if (rawUsername === null || rawUsername === undefined) {
     if (c.req.path === '/' || c.req.path === '') {
       c.header('Cache-Control', 'public, max-age=86400, s-maxage=86400')
       c.header('Netlify-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
@@ -60,8 +66,11 @@ app.all('*', async (c) => {
     return c.notFound()
   }
 
+  // If we have 'user', we MUST return an SVG (or JSON if requested)
+  const username = rawUsername.trim();
+
   // 1. Input Validation
-  if (!GITHUB_USERNAME_REGEX.test(username)) {
+  if (!username || !GITHUB_USERNAME_REGEX.test(username)) {
     return c.body(renderErrorSVG('Invalid Username').toString(), 200, {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'no-store, no-cache, must-revalidate'
@@ -145,7 +154,6 @@ app.all('*', async (c) => {
 
     const type = c.req.query('type')
     if (type === 'json') {
-      // JSON endpoints SHOULD use proper HTTP status codes, so we don't force 200 here if it failed.
       return c.json({ username, stats, last7, maxCount, theme })
     }
 
@@ -170,11 +178,9 @@ app.all('*', async (c) => {
   } catch (error: any) {
     const isNotFound = error.message?.includes('not found')
     const isRateLimit = error.message?.includes('Rate Limit') || error.message?.includes('429')
-    
     const message = isNotFound ? 'User Not Found' : (isRateLimit ? 'API Rate Limit' : 'GitHub API Error')
     const errorSvg = renderErrorSVG(message)
     
-    // MUST BE 200 FOR GITHUB CAMO
     return c.body(errorSvg.toString(), 200, {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'no-store, no-cache, must-revalidate'
