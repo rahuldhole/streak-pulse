@@ -20,11 +20,10 @@ let githubRateLimitResetAt = 0
 // Global error handler
 app.onError((err, c) => {
   console.error('App Error:', err)
-  const url = new URL(c.req.url)
   const message = err.message || 'Internal Server Error'
   
-  // Only return SVG if the ?user parameter was present
-  if (url.searchParams.has('user')) {
+  // Use Hono's native query parser
+  if (c.req.query('user') !== undefined) {
     return c.body(renderErrorSVG(message).toString(), 200, {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'no-store, no-cache, must-revalidate'
@@ -36,10 +35,8 @@ app.onError((err, c) => {
 })
 
 app.notFound((c) => {
-  const url = new URL(c.req.url)
-  
-  // Only return SVG if the ?user parameter was present
-  if (url.searchParams.has('user')) {
+  // Use Hono's native query parser
+  if (c.req.query('user') !== undefined) {
     return c.body(renderErrorSVG('Path Not Found').toString(), 200, {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'no-store, no-cache, must-revalidate'
@@ -52,7 +49,6 @@ app.notFound((c) => {
 app.all('*', async (c) => {
   const url = new URL(c.req.url)
 
-  // Return a mock sample SVG for the landing page preview
   if (c.req.path === '/sample.svg') {
     const mockStats = { 
       current: { count: parseInt(c.req.query('current') || '42'), start: '2024-01-01', end: '2024-02-12' }, 
@@ -69,8 +65,10 @@ app.all('*', async (c) => {
     return c.body(svg.toString(), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' })
   }
 
-  // If NO 'user' parameter is present, return HTML (Landing Page or 404)
-  if (!url.searchParams.has('user')) {
+  const queryUser = c.req.query('user');
+
+  // If NO 'user' parameter is present (strictly undefined), return HTML
+  if (queryUser === undefined) {
     if (c.req.path === '/' || c.req.path === '') {
       c.header('Cache-Control', 'public, max-age=86400, s-maxage=86400')
       c.header('Netlify-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
@@ -80,9 +78,8 @@ app.all('*', async (c) => {
   }
 
   // --- From here on, we MUST return an SVG (or JSON if requested) ---
-  const username = url.searchParams.get('user')?.trim() || ''
+  const username = queryUser.trim()
 
-  // 1. Input Validation
   if (!username || !GITHUB_USERNAME_REGEX.test(username)) {
     return c.body(renderErrorSVG('Invalid Username').toString(), 200, {
       'Content-Type': 'image/svg+xml',
@@ -90,7 +87,6 @@ app.all('*', async (c) => {
     })
   }
 
-  // 2. IP-based Rate Limiting
   const ip = c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip') || 'unknown'
   const now = Date.now()
   const userLimit = ipRateLimit.get(ip)
@@ -108,7 +104,6 @@ app.all('*', async (c) => {
     ipRateLimit.set(ip, { count: 1, reset: now + RATE_LIMIT_WINDOW })
   }
 
-  // 3. Circuit Breaker
   if (githubRateLimitRemaining < 50 && now < githubRateLimitResetAt) {
     const retryAfter = Math.ceil((githubRateLimitResetAt - now) / 1000)
     return c.body(renderErrorSVG('Circuit Breaker Active').toString(), 200, {
@@ -127,8 +122,8 @@ app.all('*', async (c) => {
 
   const normalizedUrl = new URL(url.origin);
   normalizedUrl.searchParams.set('user', username);
-  if (url.searchParams.has('theme')) normalizedUrl.searchParams.set('theme', url.searchParams.get('theme')!);
-  if (url.searchParams.has('type')) normalizedUrl.searchParams.set('type', url.searchParams.get('type')!);
+  if (c.req.query('theme')) normalizedUrl.searchParams.set('theme', c.req.query('theme')!);
+  if (c.req.query('type')) normalizedUrl.searchParams.set('type', c.req.query('type')!);
 
   const cacheKey = cache ? new Request(normalizedUrl.toString(), c.req.raw) : null;
   if (cache && cacheKey && !c.req.query('no-cache')) {
