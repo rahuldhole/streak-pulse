@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { html } from 'hono/html'
-import pkg from '../../package.json'
+import pkg from '../../package.json' with { type: 'json' }
 
 export function LandingPage({ origin = '' }: { origin?: string }) {
   const initialUser = 'rahuldhole'
