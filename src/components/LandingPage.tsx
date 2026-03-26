@@ -113,6 +113,10 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
               <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text)', fontWeight: '500' }}>
                 💡 <b>Pro Tip:</b> If your streak looks stale after deleting years old repos, add <code>&no-cache=true</code> to your URL to force a refresh.
               </p>
+              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--muted)', fontWeight: '400' }}>
+                Need more granular streaks (like weekdays/weekends only) or more UI customization? 
+                Check out <a href="https://streak-stats.demolab.com/" target="_blank" style={{ color: 'var(--accent)', fontWeight: '600' }}>GitHub Streak Stats</a>.
+              </p>
               <p style={{ marginTop: '1rem', fontSize: '0.7rem' }}>
                 Notice an error? Please open a <a href="https://github.com/rahuldhole/github-streak/issues" target="_blank">GitHub Issue</a> or <a href="https://github.com/rahuldhole/github-streak/pulls" target="_blank">Pull Request</a>.
               </p>
