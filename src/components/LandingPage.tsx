@@ -62,8 +62,26 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
         </head>
         <body>
           <div class="container">
-            <h1>🔥 GitHub Streak <span style="font-size: 0.7rem;">v{version}</span></h1>
-            <p>Generate a Duolingo-inspired GitHub streak widget for your profile.</p>
+            <h1 style={{ marginBottom: '0.5rem' }}>🔥 GitHub Streak</h1>
+            <p style={{ marginBottom: '1.25rem' }}>Generate a Duolingo-inspired GitHub streak widget for your profile.</p>
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', marginBottom: '2.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <a href="https://github.com/rahuldhole/github-streak/releases" target="_blank" style={{ display: 'inline-flex', alignItems: 'center', height: '32px', padding: '0 0.6rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: '#f6f8fa', fontSize: '0.75rem', fontWeight: '600', color: 'var(--muted)', textDecoration: 'none', boxSizing: 'border-box' }}>
+                v{version}
+              </a>
+                            
+              <a href="https://github.com/rahuldhole/github-streak" target="_blank" style={{ display: 'inline-flex', alignItems: 'center', height: '32px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: '#f6f8fa', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text)', textDecoration: 'none', boxSizing: 'border-box', gap: '0.4rem' }}>
+                <svg height="16" viewBox="0 0 16 16" width="16" style={{ fill: 'currentColor' }}><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                View on GitHub
+              </a>
+
+              <a href="https://github.com/rahuldhole/github-streak" target="_blank" style={{ display: 'inline-flex', alignItems: 'center', height: '32px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: '#f6f8fa', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text)', textDecoration: 'none', boxSizing: 'border-box', gap: '0.4rem' }}>
+                <svg height="16" viewBox="0 0 16 16" width="16" style={{ fill: '#eac54f' }}><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path></svg>
+                Star
+                <span id="star-count" style={{ color: 'var(--muted)', fontWeight: '400', fontSize: '0.8rem' }}></span>
+              </a>
+
+              <iframe src="https://github.com/sponsors/rahuldhole/button" title="Sponsor rahuldhole" height="32" width="114" style={{ border: 0, borderRadius: '6px' }}></iframe>
+            </div>
 
             <div class="card">
               <div class="form-group">
@@ -261,6 +279,18 @@ export function LandingPage({ origin = '' }: { origin?: string }) {
                 if (e.key === 'Enter') update();
               });
             }
+
+            // Fetch GitHub stars for custom button
+            fetch('https://api.github.com/repos/rahuldhole/github-streak')
+              .then(res => res.json())
+              .then(data => {
+                const count = data.stargazers_count;
+                const starCountEl = document.getElementById('star-count');
+                if (starCountEl && count !== undefined) {
+                  starCountEl.textContent = count >= 1000 ? (count / 1000).toFixed(1) + 'k' : count;
+                }
+              })
+              .catch(err => console.error('Failed to fetch stars', err));
           </script>
           `}
         </body>

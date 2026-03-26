@@ -103,6 +103,13 @@ Instead of vanity stats, it focuses on:
 * habit reinforcement
 
 ---
+## 💖 Support the project
+
+If you find this project useful, consider sponsoring the author to support further development!
+
+[![Sponsor rahuldhole](https://img.shields.io/badge/Sponsor-rahuldhole-pink.svg?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/rahuldhole)
+
+---
 # Contributing
 
 To contribute to this project, please follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
